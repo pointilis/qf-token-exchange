@@ -1,0 +1,34 @@
+name: Deploy Cloudflare Worker
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Publish Cloudflare Worker
+        uses: cloudflare/wrangler-action@v2
+        with:
+          apiToken: ${{ secrets.CF_API_TOKEN }}
+          command: deploy
+          workingDirectory: ./
+          args: --minify
