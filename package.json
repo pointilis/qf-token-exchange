@@ -1,0 +1,19 @@
+{
+  "name": "qf-token-exhange",
+  "version": "1.0.0",
+  "description": "",
+  "license": "ISC",
+  "author": "",
+  "type": "commonjs",
+  "main": "src/index.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "devDependencies": {
+    "@types/node": "^25.6.0"
+  },
+  "dependencies": {
+    "hono": "^4.12.15",
+    "wrangler": "^4.85.0"
+  }
+}
