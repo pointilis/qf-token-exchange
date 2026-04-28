@@ -85,7 +85,7 @@ app.use('*', cors({
   allowHeaders: ['Content-Type'],
 }))
 
-app.post('/api/auth/qf/exchange', async (c) => {
+app.post('/api/auth/qf/exchange', async (c: any) => {
   try {
     const body = await c.req.json()
 
