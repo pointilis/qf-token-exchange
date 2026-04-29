@@ -1,7 +1,12 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 
-const app = new Hono()
+interface Env {
+  QF_CLIENT_ID: string
+  QF_CLIENT_SECRET: string
+}
+
+const app = new Hono<{ Bindings: Env }>()
 
 const AUTH_BASE_URL = "https://prelive-oauth2.quran.foundation"
 const JWKS_URL = `${AUTH_BASE_URL}/.well-known/jwks.json`
@@ -85,11 +90,10 @@ app.use('*', cors({
   allowHeaders: ['Content-Type'],
 }))
 
-app.post('/api/auth/qf/exchange', async (c: any) => {
+app.post('/api/auth/qf/exchange', async (c) => {
   try {
     const body = await c.req.json()
-
-    const { code, codeVerifier, redirectUri } = body
+    const { code, codeVerifier, redirectUri  } = body
 
     // ✅ Validasi input
     if (!code || !codeVerifier || !redirectUri) {
@@ -134,26 +138,7 @@ app.post('/api/auth/qf/exchange', async (c: any) => {
 
     const token = JSON.parse(rawText)
 
-    let user = null
-
-    if (token.id_token) {
-      try {
-        user = await verifyJWT(token.id_token)
-      } catch (err) {
-        return c.json({
-          error: "Invalid ID token",
-          detail: err instanceof Error ? err.message : "Unknown error"
-        }, 401)
-      }
-    }
-
-    return c.json({
-      accessToken: token.access_token,
-      refreshToken: token.refresh_token,
-      idToken: token.id_token,
-      expiresIn: token.expires_in,
-      user,
-    })
+    return c.json(token, 200)
 
   } catch (error) {
     return c.json({
