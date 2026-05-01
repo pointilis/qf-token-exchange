@@ -90,7 +90,8 @@ app.use('*', cors({
   allowHeaders: ['Content-Type'],
 }))
 
-app.post('/api/auth/qf/exchange', async (c) => {
+// Get token endpoint
+app.post('/api/auth/qf/token', async (c) => {
   try {
     const body = await c.req.json()
     const { code, codeVerifier, redirectUri  } = body
@@ -139,6 +140,116 @@ app.post('/api/auth/qf/exchange', async (c) => {
     const token = JSON.parse(rawText)
 
     return c.json(token, 200)
+
+  } catch (error) {
+    return c.json({
+      error: "Internal server error",
+      detail: error instanceof Error ? error.message : "Unknown"
+    }, 500)
+  }
+})
+
+// Refresh token endpoint
+app.post('/api/auth/qf/refresh', async (c) => {
+  try {
+    const body = await c.req.json()
+    const { refreshToken  } = body
+
+    // ✅ Validasi input
+    if (!refreshToken) {
+      return c.json({ error: "Missing required fields" }, 400)
+    }
+
+    const params = new URLSearchParams()
+    params.append("grant_type", "refresh_token")
+    params.append("refresh_token", refreshToken)
+
+    const clientId = c.env.QF_CLIENT_ID
+    const clientSecret = c.env.QF_CLIENT_SECRET
+
+    if (!clientId || !clientSecret) {
+      return c.json({ error: "Server misconfigured" }, 500)
+    }
+
+    const basicAuth = btoa(`${clientId}:${clientSecret}`)
+
+    const tokenResponse = await fetch(
+      `${AUTH_BASE_URL}/oauth2/token`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          "Authorization": `Basic ${basicAuth}`,
+        },
+        body: params.toString(),
+      }
+    )
+
+    const rawText = await tokenResponse.text()
+
+    if (!tokenResponse.ok) {
+      return c.json({
+        error: "Token exchange failed",
+        detail: rawText,
+      }, 502)
+    }
+
+    const token = JSON.parse(rawText)
+
+    return c.json(token, 200)
+
+  } catch (error) {
+    return c.json({
+      error: "Internal server error",
+      detail: error instanceof Error ? error.message : "Unknown"
+    }, 500)
+  }
+})
+
+// Logout endpoint (optional, tergantung kebutuhan)
+app.post('/api/auth/qf/logout', async (c) => {
+  try {
+    const body = await c.req.json()
+    const { refreshToken } = body
+
+    if (!refreshToken) {
+      return c.json({ error: "Missing refresh token" }, 400)
+    }
+
+    const params = new URLSearchParams()
+    params.append("token", refreshToken)
+    params.append("token_type_hint", "refresh_token")
+
+    const clientId = c.env.QF_CLIENT_ID
+    const clientSecret = c.env.QF_CLIENT_SECRET
+
+    if (!clientId || !clientSecret) {
+      return c.json({ error: "Server misconfigured" }, 500)
+    }
+
+    const basicAuth = btoa(`${clientId}:${clientSecret}`)
+
+    const revokeResponse = await fetch(
+      `${AUTH_BASE_URL}/oauth2/revoke`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          "Authorization": `Basic ${basicAuth}`,
+        },
+        body: params.toString(),
+      }
+    )
+
+    if (!revokeResponse.ok) {
+      const detail = await revokeResponse.text()
+      return c.json({
+        error: "Token revocation failed",
+        detail,
+      }, 502)
+    }
+
+    return c.json({ success: true }, 200)
 
   } catch (error) {
     return c.json({
